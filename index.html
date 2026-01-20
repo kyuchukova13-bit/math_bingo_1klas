@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Bingo 1. Клас - Full Sound Edition</title>
+    <style>
+        :root {
+            --dark-blue: #1a2a6c;
+            --ans-red: #e11d48;
+            --gold: #f2c94c;
+            --ball-grad: radial-gradient(circle at 35% 35%, #ffffff 0%, #ffecd2 30%, #f2994a 80%, #e67e22 100%);
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100vh;
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            background: radial-gradient(circle, #1a2a6c 0%, #000 100%);
+            color: white; overflow: hidden;
+        }
+
+        #game-container { display: flex; height: 100vh; align-items: center; justify-content: space-around; padding: 20px; box-sizing: border-box; }
+        
+        #lotto-sphere {
+            width: 480px; height: 480px; background: rgba(255,255,255,0.05);
+            border: 12px solid rgba(242, 201, 76, 0.4); border-radius: 50%; position: relative; overflow: hidden;
+            box-shadow: inset 0 0 50px #000;
+        }
+        .ball {
+            position: absolute; width: 48px; height: 48px; background: var(--ball-grad);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #1a2a6c; font-weight: bold; font-size: 18px; box-shadow: 2px 4px 8px rgba(0,0,0,0.5);
+        }
+
+        .card-inner { 
+            width: 450px; height: 280px; background: white; border-radius: 35px; border: 10px solid var(--gold);
+            display: flex; align-items: center; justify-content: center; 
+            color: #1a2a6c; font-size: 120px; font-weight: bold; margin-bottom: 25px;
+        }
+        #draw-btn { 
+            background: #f2994a; color: white; font-size: 30px; padding: 20px 60px;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 8px #b36b2a;
+        }
+
+        /* ИСТОРИЯ/ПРОВЕРКА */
+        #history-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); display: none; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 2000; 
+        }
+        #history-content { 
+            background: #fff; color: #222; width: 85%; max-height: 70%; 
+            border-radius: 20px; padding: 35px; overflow-y: auto; 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; 
+        }
+        .history-item { background: #fdf2e9; padding: 15px; border-radius: 12px; border-left: 8px solid #f2994a; text-align: center; }
+        .history-item small { color: #888; display: block; margin-bottom: 5px; font-size: 12px; }
+        .ans-red { color: var(--ans-red) !important; font-size: 32px !important; font-weight: bold; }
+
+        /* ПЕЧАТ */
+        #tickets-layer { display: none; background: white; color: black; }
+        @media print {
+            body { background: white; overflow: visible; }
+            #intro-screen, #game-container, #history-overlay { display: none !important; }
+            #tickets-layer { display: block !important; }
+            .page { width: 210mm; height: 297mm; padding: 10mm; margin: 0 auto; display: flex; flex-direction: column; justify-content: space-around; page-break-after: always; }
+            .ticket { width: 180mm; height: 125mm; border: 3px solid #1a2a6c; border-radius: 20px; padding: 20px; margin: 5mm auto; box-sizing: border-box; display: flex; flex-direction: column; position: relative; page-break-inside: avoid; }
+        }
+
+        .ticket h2 { margin: 0; font-size: 30px; color: #b21f1f; text-align: center; margin-bottom: 10px; }
+        .ticket table { width: 100%; height: 80%; border-collapse: separate; border-spacing: 8px; }
+        .ticket td { border: 2px solid #333; width: 25%; text-align: center; font-size: 40px; font-weight: bold; border-radius: 10px; }
+        .footer-name { position: absolute; bottom: 8px; right: 20px; font-size: 10px; color: #999; font-style: italic; }
+
+        #intro-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #1a2a6c, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <h1 style="font-size: 60px; color: var(--gold);">МАТЕМАТИЧЕСКО БИНГО</h1>
+        <p style="font-size: 24px;">1. КЛАС | СЪБИРАНЕ И ИЗВАЖДАНЕ ДО 20 БЕЗ ПРЕМИНАВАНЕ</p>
+        <div style="margin-top:30px;">
+            <button onclick="prepareAndPrint()" style="padding:15px 30px; border-radius:30px; border:none; cursor:pointer; font-weight:bold; margin-right:15px;">🖨️ ПЕЧАТ </button>
+            <button onclick="startGame()" style="padding:15px 30px; border-radius:30px; border:none; background:var(--gold); cursor:pointer; font-weight:bold;">🚀 СТАРТ</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div style="text-align:center;">
+            <div id="lotto-sphere"></div>
+            <button onclick="toggleHistory(true)" style="margin-top:20px; background:none; border:1px solid white; color:white; padding:10px 20px; border-radius:10px; cursor:pointer;">📋 ПРОВЕРКА</button>
+        </div>
+        <div style="text-align:center;">
+            <div class="card-inner" id="card-display">?</div>
+            <button id="draw-btn" onclick="drawBall()">ИЗТЕГЛИ</button>
+        </div>
+    </div>
+
+    <div id="tickets-layer"></div>
+
+    <div id="history-overlay">
+        <h1 style="color: var(--gold); margin-bottom:20px;">ИЗТЕГЛЕНИ ЗАДАЧИ</h1>
+        <div id="history-content"></div>
+        <button onclick="toggleHistory(false)" style="margin-top:25px; padding:12px 40px; background:var(--ans-red); color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">ЗАТВОРИ</button>
+    </div>
+
+    <script>
+        // ЗВУКОВА СИСТЕМА
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, duration, type="sine", vol=0.1) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const tasks = [
+            {q: "10 + 5", a: 15}, {q: "20 - 10", a: 10}, {q: "12 + 4", a: 16}, {q: "18 - 6", a: 12},
+            {q: "7 + 2", a: 9}, {q: "15 - 15", a: 0}, {q: "11 + 7", a: 18}, {q: "19 - 9", a: 10},
+            {q: "14 + 0", a: 14}, {q: "20 - 5", a: 15}, {q: "6 + 4", a: 10}, {q: "13 - 3", a: 10},
+            {q: "10 + 10", a: 20}, {q: "8 - 4", a: 4}, {q: "1 + 2", a: 3}, {q: "16 - 10", a: 6},
+            {q: "5 + 11", a: 16}, {q: "17 - 7", a: 10}, {q: "10 + 9", a: 19}, {q: "20 - 12", a: 8},
+            {q: "11 + 2", a: 13}, {q: "5 - 0", a: 5}, {q: "10 + 7", a: 17}
+        ];
+
+        let pool = [...tasks];
+        let history = [];
+        const balls = [];
+        const sphere = document.getElementById('lotto-sphere');
+
+        function startGame() { 
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('intro-screen').style.display = 'none'; 
+        }
+
+        for (let i = 0; i <= 20; i++) {
+            const el = document.createElement('div');
+            el.className = 'ball'; el.innerText = i;
+            el.style.left = Math.random() * 420 + 'px'; el.style.top = Math.random() * 420 + 'px';
+            sphere.appendChild(el);
+            balls.push({ el, x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, s: 1 });
+        }
+
+        function animate() {
+            balls.forEach(b => {
+                let x = parseFloat(b.el.style.left); let y = parseFloat(b.el.style.top);
+                if (x <= 5 || x >= 425) b.x *= -1; if (y <= 5 || y >= 425) b.y *= -1;
+                b.el.style.left = (x + b.x * b.s) + 'px'; b.el.style.top = (y + b.y * b.s) + 'px';
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        function drawBall() {
+            if (pool.length === 0) return alert("Край!");
+            const btn = document.getElementById('draw-btn');
+            btn.disabled = true;
+
+            // Звук на разбъркване
+            balls.forEach(b => b.s = 15);
+            const mixSound = setInterval(() => playSound(200 + Math.random()*300, 0.1, "sine", 0.05), 100);
+
+            setTimeout(() => {
+                clearInterval(mixSound);
+                balls.forEach(b => b.s = 1);
+                
+                const idx = Math.floor(Math.random() * pool.length);
+                const picked = pool.splice(idx, 1)[0];
+                history.push(picked);
+                
+                document.getElementById('card-display').innerText = picked.q;
+                updateHistoryUI();
+                playSound(600, 0.5, "triangle", 0.2); // Звук при показване
+                
+                const visible = balls.filter(b => b.el.style.display !== 'none');
+                if(visible.length > 0) visible[0].el.style.display = 'none';
+                btn.disabled = false;
+            }, 1200);
+        }
+
+        function toggleHistory(show) { document.getElementById('history-overlay').style.display = show ? 'flex' : 'none'; }
+
+        function updateHistoryUI() {
+            const cont = document.getElementById('history-content');
+            cont.innerHTML = history.map((h, i) => `
+                <div class="history-item">
+                    <small>ТЕГЛЕНЕ №${i + 1}</small>
+                    <span style="font-size:22px">${h.q} = </span><span class="ans-red">${h.a}</span>
+                </div>`).join('');
+        }
+
+        function prepareAndPrint() {
+            const container = document.getElementById('tickets-layer');
+            container.innerHTML = "";
+            const nums = Array.from({length: 21}, (_, i) => i);
+            for (let i = 1; i <= 20; i++) {
+                if ((i - 1) % 2 === 0) {
+                    const page = document.createElement('div');
+                    page.className = 'page';
+                    container.appendChild(page);
+                }
+                const shuffled = [...nums].sort(() => 0.5 - Math.random()).slice(0, 16);
+                let tHtml = `<div class="ticket">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <h2 style="color:#1a2a6c;margin:0">МАТЕМАТИЧЕСКО БИНГО</h2>
+                        <div style="border:2px solid #333;padding:2px 8px;font-weight:bold">№${i}</div>
+                    </div>
+                    <table>`;
+                for(let r=0; r<4; r++) {
+                    tHtml += "<tr>";
+                    for(let c=0; c<4; c++) tHtml += `<td>${shuffled[r*4+c]}</td>`;
+                    tHtml += "</tr>";
+                }
+                tHtml += `</table><div class="footer-name">Created by Dochka Kyuchukova</div></div>`;
+                container.lastElementChild.innerHTML += tHtml;
+            }
+            window.print();
+        }
+    </script>
+</body>
+</html>
